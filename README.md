@@ -1,9 +1,9 @@
 # Restaurant Persistence Practice
 
 A small Spring Boot application for learning Java testing progressively. This
-first stage contains only the persistence layer and tests. It targets Java 21,
-uses Maven, PostgreSQL, Spring Data JPA, and includes Swagger/OpenAPI for the
-later HTTP layer.
+stage contains the persistence and service layers and their tests, but no
+controllers yet. It targets Java 21, uses Maven, PostgreSQL, Spring Data JPA,
+and includes Swagger/OpenAPI for the later HTTP layer.
 
 ## Technology
 
@@ -27,9 +27,13 @@ src/main/java/com/restaurant/
   repository/
     MenuItemRepository.java        Spring Data menu item queries
     DiningTableRepository.java     Spring Data table queries
+  service/
+    MenuItemService.java           menu item use cases: lookup, edit, retire
+    DiningTableService.java        table use cases: lookup, reserve, release
 src/test/java/com/restaurant/
   domain/                          fast unit tests with no Spring or database
   repository/                      database-backed persistence tests
+  service/                         fast unit tests with a mocked repository
   AbstractIntegrationTest.java    shared PostgreSQL Testcontainers setup
 ```
 
@@ -56,8 +60,23 @@ starts with a fresh PostgreSQL container and verifies the generated query
 against a real database. This is an integration test, not a unit test, and is
 the next testing step after the domain tests.
 
-There is intentionally no service or controller layer yet. Those can be added
-as later lessons after the persistence tests are comfortable.
+`MenuItemService` and `DiningTableService` sit on top of the repositories.
+They hold the use cases a future controller layer will call: look items up,
+edit them, retire or restore them. Each mutating method is `@Transactional` —
+that's what makes the entity *managed* for the duration of the call, so
+editing it in place (see below) is enough; the change flushes to the database
+when the transaction commits. A missing id raises
+`jakarta.persistence.EntityNotFoundException` rather than returning `null`,
+so callers don't have to remember to null-check.
+
+The service tests are unit tests too, but of a different shape than the
+domain tests: they use Mockito (`@ExtendWith(MockitoExtension.class)`,
+`@Mock`) to fake the repository instead of hitting a database, so they can
+verify the service's own logic — delegation, the not-found exception — in
+isolation and without Spring or Docker.
+
+There is intentionally no controller layer yet. That can be added as a later
+lesson once the service tests are comfortable.
 
 ### Editing entities in place
 
@@ -81,7 +100,7 @@ repository queries.
 ## Run unit tests only
 
 ```bash
-mvn -Dtest='com.restaurant.domain.*Test' test
+mvn -Dtest='com.restaurant.domain.*Test,com.restaurant.service.*Test' test
 ```
 
 ## Run persistence tests
