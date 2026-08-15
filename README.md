@@ -59,6 +59,19 @@ the next testing step after the domain tests.
 There is intentionally no service or controller layer yet. Those can be added
 as later lessons after the persistence tests are comfortable.
 
+### Editing entities in place
+
+`MenuItem.updateDetails(...)` and `DiningTable.updateSeats(...)` mutate an
+entity's fields directly, the same way `markReserved()` and
+`markUnavailable()` do. As long as the entity is *managed* — loaded from the
+database within an open persistence context, not detached — Hibernate
+tracks the change and writes it back on the next flush without needing an
+explicit `save()` call. This is called dirty checking, and
+`MenuItemRepositoryTest.editingManagedEntity_flushesChangesWithoutExplicitSave`
+demonstrates it: it loads a `MenuItem`, edits it in place, calls
+`entityManager.flush()`, then re-reads it to confirm the change reached the
+database.
+
 ## Data model
 
 Two entities, no relationship between them yet — see the full

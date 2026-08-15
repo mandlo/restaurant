@@ -21,4 +21,13 @@ class DiningTableTest {
 
         assertThat(table.isAvailable()).isFalse();
     }
+
+    @Test
+    void updateSeats_changesSeatCount() {
+        DiningTable table = new DiningTable(4, 4);
+
+        table.updateSeats(6);
+
+        assertThat(table.getSeats()).isEqualTo(6);
+    }
 }

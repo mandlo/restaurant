@@ -40,4 +40,8 @@ public class DiningTable {
     public void markAvailable() {
         available = true;
     }
+
+    public void updateSeats(int seats) {
+        this.seats = seats;
+    }
 }

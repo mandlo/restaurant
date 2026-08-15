@@ -57,4 +57,10 @@ public class MenuItem {
     public void markAvailable() {
         available = true;
     }
+
+    public void updateDetails(String name, BigDecimal price, int preparationMinutes) {
+        this.name = name;
+        this.price = price;
+        this.preparationMinutes = preparationMinutes;
+    }
 }
