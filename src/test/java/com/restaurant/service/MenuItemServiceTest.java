@@ -79,4 +79,23 @@ class MenuItemServiceTest {
         assertThatThrownBy(() -> menuItemService.markUnavailable(1L))
                 .isInstanceOf(EntityNotFoundException.class);
     }
+
+    @Test
+    void markAvailable_marksAnExistingMenuItemAvailable() {
+        MenuItem pasta = new MenuItem("Pasta", MenuItemCategory.MAIN, new BigDecimal("14.50"), 20);
+        pasta.markUnavailable();
+        when(menuItemRepository.findById(1L)).thenReturn(Optional.of(pasta));
+
+        menuItemService.markAvailable(1L);
+
+        assertThat(pasta.isAvailable()).isTrue();
+    }
+
+    @Test
+    void markAvailable_throwsWhenMenuItemDoesNotExist() {
+        when(menuItemRepository.findById(1L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> menuItemService.markAvailable(1L))
+                .isInstanceOf(EntityNotFoundException.class);
+    }
 }
