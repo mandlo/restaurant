@@ -76,4 +76,22 @@ class DiningTableServiceTest {
         assertThatThrownBy(() -> diningTableService.release(1L))
                 .isInstanceOf(EntityNotFoundException.class);
     }
+
+    @Test
+    void updateSeats_changesSeatCountOnAnExistingTable() {
+        DiningTable table = new DiningTable(3, 4);
+        when(diningTableRepository.findById(1L)).thenReturn(Optional.of(table));
+
+        DiningTable updated = diningTableService.updateSeats(1L, 6);
+
+        assertThat(updated.getSeats()).isEqualTo(6);
+    }
+
+    @Test
+    void updateSeats_throwsWhenTableDoesNotExist() {
+        when(diningTableRepository.findById(1L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> diningTableService.updateSeats(1L, 6))
+                .isInstanceOf(EntityNotFoundException.class);
+    }
 }

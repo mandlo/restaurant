@@ -36,6 +36,13 @@ public class DiningTableService {
         return table;
     }
 
+    @Transactional
+    public DiningTable updateSeats(Long id, int seats) {
+        DiningTable table = findOrThrow(id);
+        table.updateSeats(seats);
+        return table;
+    }
+
     private DiningTable findOrThrow(Long id) {
         return diningTableRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Dining table " + id + " not found"));
