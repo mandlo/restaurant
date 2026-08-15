@@ -28,7 +28,7 @@ src/main/java/com/restaurant/
     MenuItemRepository.java        Spring Data menu item queries
     DiningTableRepository.java     Spring Data table queries
   service/
-    MenuItemService.java           menu item use cases: lookup, edit, retire
+    MenuItemService.java           menu item use cases: lookup, edit, retire, restore
     DiningTableService.java        table use cases: lookup, reserve, release
 src/test/java/com/restaurant/
   domain/                          fast unit tests with no Spring or database
