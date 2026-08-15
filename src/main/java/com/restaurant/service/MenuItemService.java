@@ -36,6 +36,11 @@ public class MenuItemService {
         findOrThrow(id).markUnavailable();
     }
 
+    @Transactional
+    public void markAvailable(Long id) {
+        findOrThrow(id).markAvailable();
+    }
+
     private MenuItem findOrThrow(Long id) {
         return menuItemRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Menu item " + id + " not found"));
