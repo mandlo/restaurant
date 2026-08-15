@@ -1,0 +1,18 @@
+spring:
+  application:
+    name: restaurant
+  datasource:
+    url: jdbc:postgresql://localhost:5432/restaurant
+    username: restaurant
+    password: restaurant
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
