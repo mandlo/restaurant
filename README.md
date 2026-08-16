@@ -1,9 +1,10 @@
 # Restaurant Persistence Practice
 
-A small Spring Boot application for learning Java testing progressively. This
-stage contains the persistence and service layers and their tests, but no
-controllers yet. It targets Java 21, uses Maven, PostgreSQL, Spring Data JPA,
-and includes Swagger/OpenAPI for the later HTTP layer.
+A small Spring Boot application for learning Java testing progressively. It
+now has a full slice through the stack — persistence, service, and a REST API
+you can exercise from Swagger — each with its own testing style. It targets
+Java 21, uses Maven, PostgreSQL, Spring Data JPA, and Spring MVC, with
+springdoc-openapi generating the Swagger UI from the controllers.
 
 ## Technology
 
@@ -30,10 +31,16 @@ src/main/java/com/restaurant/
   service/
     MenuItemService.java           menu item use cases: lookup, edit, retire, restore
     DiningTableService.java        table use cases: lookup, reserve, release, edit
+  controller/
+    MenuItemController.java        REST endpoints under /api/menu-items
+    DiningTableController.java     REST endpoints under /api/dining-tables
+    ApiExceptionHandler.java       maps EntityNotFoundException and validation errors to HTTP status codes
+    dto/                           request/response records, kept separate from the entities
 src/test/java/com/restaurant/
   domain/                          fast unit tests with no Spring or database
   repository/                      database-backed persistence tests
   service/                         fast unit tests with a mocked repository
+  controller/                      fast @WebMvcTest slice tests with a mocked service
   AbstractIntegrationTest.java    shared PostgreSQL Testcontainers setup
 ```
 
@@ -61,8 +68,8 @@ against a real database. This is an integration test, not a unit test, and is
 the next testing step after the domain tests.
 
 `MenuItemService` and `DiningTableService` sit on top of the repositories.
-They hold the use cases a future controller layer will call: look items up,
-edit them, retire or restore them. Each mutating method is `@Transactional` —
+They hold the use cases the controllers below call: look items up, edit them,
+retire or restore them. Each mutating method is `@Transactional` —
 that's what makes the entity *managed* for the duration of the call, so
 editing it in place (see below) is enough; the change flushes to the database
 when the transaction commits. A missing id raises
@@ -75,8 +82,27 @@ domain tests: they use Mockito (`@ExtendWith(MockitoExtension.class)`,
 verify the service's own logic — delegation, the not-found exception — in
 isolation and without Spring or Docker.
 
-There is intentionally no controller layer yet. That can be added as a later
-lesson once the service tests are comfortable.
+`MenuItemController` and `DiningTableController` translate HTTP to service
+calls. Request and response bodies are records in `controller/dto/`, not the
+entities themselves — `MenuItemRequest` carries its own Bean Validation
+annotations (`@NotBlank`, `@DecimalMin`, ...), and `MenuItemResponse.from(...)`
+maps an entity to the shape returned over the wire. Keeping that mapping at
+the controller boundary means the entity is free to change internally without
+changing the API, and the API is free to omit or reshape fields without
+touching the entity.
+
+`ApiExceptionHandler` is a `@RestControllerAdvice`: it catches
+`EntityNotFoundException` (thrown by the services) and turns it into a `404`
+with a `{"message": "..."}` body, and catches Bean Validation failures on
+`@Valid @RequestBody` arguments and turns them into a `400` the same way.
+Without it, both would otherwise surface as an unhelpful `500`.
+
+The controller tests use `@WebMvcTest`, a slice test that boots only the web
+layer — no database, no service implementation, no Docker. `@MockBean`
+replaces the real service with a Mockito mock, and `MockMvc` sends real HTTP
+requests through real Spring MVC request handling (routing, JSON
+(de)serialization, validation, the exception handler) so what's being tested
+is the wiring, not just a Java method call.
 
 ### Editing entities in place
 
@@ -100,7 +126,7 @@ repository queries.
 ## Run unit tests only
 
 ```bash
-mvn -Dtest='com.restaurant.domain.*Test,com.restaurant.service.*Test' test
+mvn -Dtest='com.restaurant.domain.*Test,com.restaurant.service.*Test,com.restaurant.controller.*Test' test
 ```
 
 ## Run persistence tests
@@ -121,10 +147,69 @@ createdb restaurant
 mvn spring-boot:run
 ```
 
-Swagger UI is configured at:
+Swagger UI is at http://localhost:8080/swagger-ui.html (raw OpenAPI JSON at
+http://localhost:8080/v3/api-docs). The database starts empty, so create a
+table and a menu item first and reuse the `id` each response returns for the
+rest of the walkthrough below.
 
-- http://localhost:8080/swagger-ui.html
-- http://localhost:8080/v3/api-docs
+## Try the API with Swagger
 
-This persistence-only stage has no controllers, so Swagger will not list API
-operations until the controller lesson is added.
+Every endpoint is grouped in Swagger UI under its tag ("Menu items" /
+"Dining tables"). Expand an operation, click **Try it out**, fill in the body
+or parameters, then **Execute**.
+
+### Menu items — `/api/menu-items`
+
+| Method | Path | Body | Does |
+|---|---|---|---|
+| POST | `/api/menu-items` | `MenuItemRequest` | add a menu item |
+| GET | `/api/menu-items/{id}` | — | look up one item |
+| GET | `/api/menu-items?category=MAIN` | — | list available items in a category |
+| PUT | `/api/menu-items/{id}` | `MenuItemRequest` | edit name, price, prep time |
+| PATCH | `/api/menu-items/{id}/unavailable` | — | take off the menu |
+| PATCH | `/api/menu-items/{id}/available` | — | put back on the menu |
+
+Example `MenuItemRequest` — POST this first, then reuse the returned `id`:
+
+```json
+{
+  "name": "Truffle Pasta",
+  "category": "MAIN",
+  "price": 18.00,
+  "preparationMinutes": 25
+}
+```
+
+`category` must be one of `STARTER`, `MAIN`, `DESSERT`, `DRINK`. Try `POST`
+again with `"name": ""` or `"price": 0` — you'll get a `400` with a
+`message` field naming what's wrong, instead of a `500`.
+
+### Dining tables — `/api/dining-tables`
+
+| Method | Path | Body | Does |
+|---|---|---|---|
+| POST | `/api/dining-tables` | `DiningTableRequest` | add a table |
+| GET | `/api/dining-tables/{id}` | — | look up one table |
+| GET | `/api/dining-tables?minSeats=4` | — | list available tables with enough seats |
+| PUT | `/api/dining-tables/{id}/seats` | `UpdateSeatsRequest` | change seat count |
+| PATCH | `/api/dining-tables/{id}/reserve` | — | reserve a table |
+| PATCH | `/api/dining-tables/{id}/release` | — | release a reserved table |
+
+Example `DiningTableRequest`:
+
+```json
+{ "tableNumber": 5, "seats": 4 }
+```
+
+Example `UpdateSeatsRequest`:
+
+```json
+{ "seats": 6 }
+```
+
+A full walkthrough: `POST` a table with `seats: 4`, `PATCH .../reserve` it and
+watch `available` flip to `false` in the response, then `PATCH .../release`
+and watch it flip back. Looking up, reserving, releasing, or editing an `id`
+that doesn't exist returns `404` with `{"message": "Dining table 99 not
+found"}` rather than an unhandled exception — that's `ApiExceptionHandler`
+again, reused across both controllers.
