@@ -16,6 +16,7 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -29,6 +30,35 @@ class MenuItemServiceTest {
     @BeforeEach
     void setUp() {
         menuItemService = new MenuItemService(menuItemRepository);
+    }
+
+    @Test
+    void create_savesAndReturnsANewMenuItem() {
+        when(menuItemRepository.save(any(MenuItem.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        MenuItem created = menuItemService.create("Pasta", MenuItemCategory.MAIN, new BigDecimal("14.50"), 20);
+
+        assertThat(created.getName()).isEqualTo("Pasta");
+        assertThat(created.getCategory()).isEqualTo(MenuItemCategory.MAIN);
+        assertThat(created.getPrice()).isEqualByComparingTo("14.50");
+        assertThat(created.getPreparationMinutes()).isEqualTo(20);
+        assertThat(created.isAvailable()).isTrue();
+    }
+
+    @Test
+    void findById_returnsAnExistingMenuItem() {
+        MenuItem pasta = new MenuItem("Pasta", MenuItemCategory.MAIN, new BigDecimal("14.50"), 20);
+        when(menuItemRepository.findById(1L)).thenReturn(Optional.of(pasta));
+
+        assertThat(menuItemService.findById(1L)).isSameAs(pasta);
+    }
+
+    @Test
+    void findById_throwsWhenMenuItemDoesNotExist() {
+        when(menuItemRepository.findById(1L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> menuItemService.findById(1L))
+                .isInstanceOf(EntityNotFoundException.class);
     }
 
     @Test
@@ -81,14 +111,14 @@ class MenuItemServiceTest {
     }
 
     @Test
-    void markAvailable_marksAnExistingMenuItemAvailable() {
+    void markAvailable_reopensAnUnavailableMenuItem() {
         MenuItem pasta = new MenuItem("Pasta", MenuItemCategory.MAIN, new BigDecimal("14.50"), 20);
         pasta.markUnavailable();
         when(menuItemRepository.findById(1L)).thenReturn(Optional.of(pasta));
 
-        menuItemService.markAvailable(1L);
+        MenuItem reopened = menuItemService.markAvailable(1L);
 
-        assertThat(pasta.isAvailable()).isTrue();
+        assertThat(reopened.isAvailable()).isTrue();
     }
 
     @Test

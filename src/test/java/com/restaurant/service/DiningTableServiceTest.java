@@ -14,6 +14,7 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -27,6 +28,33 @@ class DiningTableServiceTest {
     @BeforeEach
     void setUp() {
         diningTableService = new DiningTableService(diningTableRepository);
+    }
+
+    @Test
+    void create_savesAndReturnsANewTable() {
+        when(diningTableRepository.save(any(DiningTable.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        DiningTable created = diningTableService.create(5, 4);
+
+        assertThat(created.getTableNumber()).isEqualTo(5);
+        assertThat(created.getSeats()).isEqualTo(4);
+        assertThat(created.isAvailable()).isTrue();
+    }
+
+    @Test
+    void findById_returnsAnExistingTable() {
+        DiningTable table = new DiningTable(3, 4);
+        when(diningTableRepository.findById(1L)).thenReturn(Optional.of(table));
+
+        assertThat(diningTableService.findById(1L)).isSameAs(table);
+    }
+
+    @Test
+    void findById_throwsWhenTableDoesNotExist() {
+        when(diningTableRepository.findById(1L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> diningTableService.findById(1L))
+                .isInstanceOf(EntityNotFoundException.class);
     }
 
     @Test

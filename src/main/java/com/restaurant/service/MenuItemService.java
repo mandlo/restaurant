@@ -19,6 +19,16 @@ public class MenuItemService {
         this.menuItemRepository = menuItemRepository;
     }
 
+    @Transactional
+    public MenuItem create(String name, MenuItemCategory category, BigDecimal price, int preparationMinutes) {
+        return menuItemRepository.save(new MenuItem(name, category, price, preparationMinutes));
+    }
+
+    @Transactional(readOnly = true)
+    public MenuItem findById(Long id) {
+        return findOrThrow(id);
+    }
+
     @Transactional(readOnly = true)
     public List<MenuItem> findAvailableByCategory(MenuItemCategory category) {
         return menuItemRepository.findByCategoryAndAvailableTrue(category);
@@ -32,13 +42,17 @@ public class MenuItemService {
     }
 
     @Transactional
-    public void markUnavailable(Long id) {
-        findOrThrow(id).markUnavailable();
+    public MenuItem markUnavailable(Long id) {
+        MenuItem menuItem = findOrThrow(id);
+        menuItem.markUnavailable();
+        return menuItem;
     }
 
     @Transactional
-    public void markAvailable(Long id) {
-        findOrThrow(id).markAvailable();
+    public MenuItem markAvailable(Long id) {
+        MenuItem menuItem = findOrThrow(id);
+        menuItem.markAvailable();
+        return menuItem;
     }
 
     private MenuItem findOrThrow(Long id) {

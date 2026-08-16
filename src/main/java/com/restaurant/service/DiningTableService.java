@@ -17,6 +17,16 @@ public class DiningTableService {
         this.diningTableRepository = diningTableRepository;
     }
 
+    @Transactional
+    public DiningTable create(int tableNumber, int seats) {
+        return diningTableRepository.save(new DiningTable(tableNumber, seats));
+    }
+
+    @Transactional(readOnly = true)
+    public DiningTable findById(Long id) {
+        return findOrThrow(id);
+    }
+
     @Transactional(readOnly = true)
     public List<DiningTable> findAvailableWithMinimumSeats(int minimumSeats) {
         return diningTableRepository.findBySeatsGreaterThanEqualAndAvailableTrue(minimumSeats);
