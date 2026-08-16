@@ -95,7 +95,9 @@ touching the entity.
 `EntityNotFoundException` (thrown by the services) and turns it into a `404`
 with a `{"message": "..."}` body, and catches Bean Validation failures on
 `@Valid @RequestBody` arguments and turns them into a `400` the same way.
-Without it, both would otherwise surface as an unhelpful `500`.
+Without it, both would otherwise surface as an unhelpful `500`. See
+[docs/exceptions.md](docs/exceptions.md) for where each exception comes
+from, why, and how it's tested.
 
 The controller tests use `@WebMvcTest`, a slice test that boots only the web
 layer — no database, no service implementation, no Docker. `@MockBean`
