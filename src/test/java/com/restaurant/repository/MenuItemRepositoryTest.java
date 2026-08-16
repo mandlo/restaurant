@@ -21,6 +21,7 @@ class MenuItemRepositoryTest extends AbstractIntegrationTest {
     private EntityManager entityManager;
 
     @Test
+    @Transactional
     void findByCategoryAndAvailableTrue_returnsOnlyAvailableItemsInCategory() {
         menuItemRepository.save(new MenuItem("Soup", MenuItemCategory.STARTER, new BigDecimal("6.00"), 10));
         MenuItem unavailable = menuItemRepository.save(
